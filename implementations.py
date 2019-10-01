@@ -2,9 +2,9 @@
 import numpy as np
 
 def standardize(x):
-    mean_x = np.mean(x, axis = 0)
+    mean_x = np.nanmean(x, axis = 0)
     x = x - mean_x
-    std_x = np.std(x, axis = 0)
+    std_x = np.nanstd(x, axis = 0)
     x = x / std_x
     return x, mean_x, std_x
 
