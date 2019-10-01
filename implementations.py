@@ -112,13 +112,13 @@ def logistic_gradient_descent(y, tx, init_w, max_iter, gamma, batch_size = 1):
 def classification(x):
     return np.where(x < 1/2, 0, 1)
 
-def reg_logistic_loss(y, tx, w, gamma):
-    return logistic_loss(y, tx, w) - (gamma / 2) * w.T @ w
+def reg_logistic_loss(y, tx, w, lambda_):
+    return logistic_loss(y, tx, w) - (lambda_ / 2) * w.T @ w
 
-def reg_logistic_gradient(y, tx, w, gamma):
-    return logistic_gradient(y, tx, w) + gamma * w
+def reg_logistic_gradient(y, tx, w, lambda_):
+    return logistic_gradient(y, tx, w) + lambda_* w
 
-def reg_gradient_descent(y, tx, init_w, max_iter, gamma, batch_size = 1):
+def reg_gradient_descent(y, tx, lambda_, init_w, max_iter, gamma, batch_size = 1):
     w = init_w
     rand_list = np.arange(y.shape[0])
     for i in range(max_iter):
@@ -129,8 +129,8 @@ def reg_gradient_descent(y, tx, init_w, max_iter, gamma, batch_size = 1):
             y = y[rand_list]
             tx = tx[rand_list]
             
-        grad = reg_logistic_gradient(y, tx, w, gamma)
+        grad = reg_logistic_gradient(y, tx, w, lambda_)
         w = w - gamma * grad
         
-        loss = reg_logistic_loss(y, tx, w, gamma)
+        loss = reg_logistic_loss(y, tx, w, lambda_)
     return loss, w
