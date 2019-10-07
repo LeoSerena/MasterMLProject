@@ -87,22 +87,14 @@ def logistic_loss(y, x, w):
     loss = -np.mean(y * np.log(pred(x,w)+eps) + (1-y) * np.log(1-pred(x,w)+eps))
     return loss
 
-# def logistic_loss(y, tx, w):
-#     pred = sigmoid(tx.dot(w))
-#     loss = y.T.dot(np.log(pred)) + (1 - y).T.dot(np.log(1 - pred))
-#     return np.squeeze(- loss)
-
-#LR for SGD, batch size = 1 for now
 def logistic_gradient(y, x, w):
-    #np.dot instead of @; @ should not work if batch size = 1
     return (1 / y.shape[0]) * np.dot(x.T,(pred(x, w) - y))
-    return np.dot(x.T,(pred(x, w) - y))
-
+    #return np.dot(x.T,(pred(x, w) - y))
 
 def pred(x, w):
     return sigmoid(np.dot(x,w))
 
-#SGD, so batch size of 1 as in project description
+#LR with SGD
 def logistic_regression(y, tx, initial_w, max_iters, gamma):
     w = initial_w
     for i in range(max_iters):
@@ -114,43 +106,40 @@ def logistic_regression(y, tx, initial_w, max_iters, gamma):
     loss = logistic_loss(y, tx, w)
     return loss, w
 
-#logistic regression with GD
+#LR with GD
 def GD_logistic_regression(y, tx, initial_w, max_iters, gamma):
     w = initial_w
     for i in range(max_iters):
         if (i % 100 == 0) and (i != 0):
             loss = logistic_loss(y, tx, w)
             print("Iteration:{}, loss : {}".format(i,loss))
-#             print("Iteration:{}".format(i))
         grad = logistic_gradient(y, tx, w)
-        #print(grad)
         w = w - gamma * grad
-    #loss = logistic_loss(y, tx, w)
-    loss = 0
+    loss = logistic_loss(y, tx, w)
     return loss, w
 
 def classification(x):
     return np.where(x < 1/2, 0, 1)
 
 def reg_logistic_loss(y, tx, w, lambda_):
-    # + reg term not -
     return logistic_loss(y, tx, w) + (lambda_ / 2) * w.T @ w
 
 def reg_logistic_gradient(y, tx, w, lambda_):
     return logistic_gradient(y, tx, w) + lambda_* w
 
+#LR with L2 reg and SGD
 def reg_logistic_regression(y, tx, lambda_, initial_w, max_iters, gamma):
     w = initial_w
     for i in range(max_iters):
         idx = np.random.randint(y.shape[0])
         x = tx[idx]
         label = y[idx]
-        grad = reg_logistic_gradient(y, tx, w, lambda_)
+        grad = reg_logistic_gradient(label, x, w, lambda_)
         w = w - gamma * grad        
     loss = reg_logistic_loss(y, tx, w, lambda_)
     return loss, w
     
-    
+#LR with L2 reg and SGD    
 def GD_reg_logistic_regression(y, tx, lambda_, initial_w, max_iters, gamma):
     w = initial_w
     for i in range(max_iters):
@@ -160,22 +149,4 @@ def GD_reg_logistic_regression(y, tx, lambda_, initial_w, max_iters, gamma):
         grad = reg_logistic_gradient(y, tx, w, lambda_)
         w = w - gamma * grad        
     loss = reg_logistic_loss(y, tx, w, lambda_)
-    return loss, w
-
-
-def reg_gradient_descent(y, tx, lambda_, init_w, max_iter, gamma, batch_size = 1):
-    w = init_w
-    rand_list = np.arange(y.shape[0])
-    for i in range(max_iter):
-        # since often 1, just to save randomization cost
-        if batch_size != 1:
-            np.random.shuffle(rand_list)
-            # randomizing y and tx so we can take the first *batch_size* elements
-            y = y[rand_list]
-            tx = tx[rand_list]
-            
-        grad = reg_logistic_gradient(y, tx, w, lambda_)
-        w = w - gamma * grad
-        
-        loss = reg_logistic_loss(y, tx, w, lambda_)
     return loss, w
