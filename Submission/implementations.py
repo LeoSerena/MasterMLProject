@@ -38,7 +38,6 @@ def least_squares_GD(y, tx, initial_w, max_iters, gamma):
 
 def least_squares_SGD(y, tx, initial_w, max_iters, gamma):
     w = initial_w
-    rand_list = np.arange(y.shape[0])
     N = tx.shape[0]
     for i in range(max_iters):
         idx = np.random.randint(N)
