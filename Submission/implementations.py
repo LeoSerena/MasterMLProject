@@ -6,8 +6,7 @@ def standardize(x):
     x = x - mean_x
     std_x = np.nanstd(x, axis = 0)
     x = x / std_x
-    return x, mean_x, std_x
-
+    return x
 
 # feature 1 : split der_mass
 def make_feature_split_mass(X):
@@ -41,7 +40,7 @@ def make_feature_momentums(X):
     X = np.column_stack((X, subjet_px,subjet_py,subjet_pz))
     return X
 
-# #feature 3: abs phi angles
+#feature 3: abs phi angles
 def make_feature_abs_phi(X):
     #der_met_phi_centrality
     X[:,11] = np.abs(X[:,11])
@@ -57,15 +56,15 @@ def make_feature_abs_phi(X):
     X[:,27] = np.abs(X[:,27])
     return X
 
-# #feature 4: ratios
+#feature 4: ratios
 def make_feature_ratios(X):
     tau_lep_ratio = X[:,13]/X[:,16]
     met_tot_ratio = X[:,19]/X[:,21]
     X = np.column_stack((X, tau_lep_ratio,met_tot_ratio))
     return X
 
-# #feature 5: jets_diff_angle
-def make_feature_diff_angle(X):
+#feature 5: jets_diff_angle
+def make_feature_diff_angles(X):
     jets_diff_angle = np.cos(X[:,24]-X[:,27])
     X = np.column_stack((X, jets_diff_angle))
     return X
