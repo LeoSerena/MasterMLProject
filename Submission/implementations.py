@@ -8,6 +8,68 @@ def standardize(x):
     x = x / std_x
     return x, mean_x, std_x
 
+
+# feature 1 : split der_mass
+def make_feature_split_mass(X):
+    X_gt_mmc = np.array(X[:,0], copy=True)
+    X_gt_mmc[X_gt_mmc <= 140] = 140
+    X[:,0][X[:,0] > 140] = 140
+    X = np.column_stack((X, X_gt_mmc))
+    return X
+
+# feature 2 : add momentums
+def make_feature_momentums(X):
+    #add tau momentums
+    tau_px = X[:,13]*np.cos(X[:,15])
+    tau_py = X[:,13]*np.sin(X[:,15])
+    tau_pz = X[:,13]*np.sinh(X[:,14])
+    X = np.column_stack((X, tau_px,tau_py,tau_pz))
+    #add lep momentums
+    lep_px = X[:,16]*np.cos(X[:,18])
+    lep_py = X[:,16]*np.cos(X[:,18])
+    lep_pz = X[:,16]*np.cos(X[:,17])
+    X = np.column_stack((X, lep_px,lep_py,lep_pz))
+    #add leading jet momentums
+    jet_px = X[:,23]*np.cos(X[:,25])
+    jet_py = X[:,23]*np.cos(X[:,25])
+    jet_pz = X[:,23]*np.cos(X[:,24])
+    X = np.column_stack((X, jet_px,jet_py,jet_pz))
+    #add subleading jet momentums
+    subjet_px = X[:,26]*np.cos(X[:,28])
+    subjet_py = X[:,26]*np.cos(X[:,28])
+    subjet_pz = X[:,26]*np.cos(X[:,27])
+    X = np.column_stack((X, subjet_px,subjet_py,subjet_pz))
+    return X
+
+# #feature 3: abs phi angles
+def make_feature_abs_phi(X):
+    #der_met_phi_centrality
+    X[:,11] = np.abs(X[:,11])
+    #tau phi
+    X[:,15] = np.abs(X[:,15])
+    #lep phi
+    X[:,18] = np.abs(X[:,18])
+    #met phi
+    X[:,20] = np.abs(X[:,20])
+    #lead jet phi
+    X[:,24] = np.abs(X[:,24])
+    #sublead jet phi
+    X[:,27] = np.abs(X[:,27])
+    return X
+
+# #feature 4: ratios
+def make_feature_ratios(X):
+    tau_lep_ratio = X[:,13]/X[:,16]
+    met_tot_ratio = X[:,19]/X[:,21]
+    X = np.column_stack((X, tau_lep_ratio,met_tot_ratio))
+    return X
+
+# #feature 5: jets_diff_angle
+def make_feature_diff_angle(X):
+    jets_diff_angle = np.cos(X[:,24]-X[:,27])
+    X = np.column_stack((X, jets_diff_angle))
+    return X
+
 def compute_loss(y, tx, w, mse = True):
     N = y.shape[0]
     if mse:
