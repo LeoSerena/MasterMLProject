@@ -50,7 +50,7 @@ def least_squares_SGD(y, tx, initial_w, max_iters, gamma, batch_size = 1):
         tx = tx[rand_list]
         
         # compute loss and gradent descent
-        grad = compute_stoch_gradient(y[:batch_size], tx[:batch_size,:], w)
+        grad = mse_gradient(y[:batch_size], tx[:batch_size,:], w)
         
         w = w - gamma * grad
         
@@ -88,8 +88,7 @@ def logistic_loss(y, x, w):
     return loss
 
 def logistic_gradient(y, x, w):
-    return (1 / y.shape[0]) * np.dot(x.T,(pred(x, w) - y))
-    #return np.dot(x.T,(pred(x, w) - y))
+    return np.dot(x.T,(pred(x, w) - y))
 
 def pred(x, w):
     return sigmoid(np.dot(x,w))
@@ -113,7 +112,7 @@ def GD_logistic_regression(y, tx, initial_w, max_iters, gamma):
         if (i % 100 == 0) and (i != 0):
             loss = logistic_loss(y, tx, w)
             print("Iteration:{}, loss : {}".format(i,loss))
-        grad = logistic_gradient(y, tx, w)
+        grad = (1 / y.shape[0]) * logistic_gradient(y, tx, w)
         w = w - gamma * grad
     loss = logistic_loss(y, tx, w)
     return loss, w

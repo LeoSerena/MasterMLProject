@@ -50,12 +50,12 @@ def least_squares_SGD(y, tx, initial_w, max_iters, gamma, batch_size = 1):
         tx = tx[rand_list]
         
         # compute loss and gradent descent
-        grad = compute_stoch_gradient(y[:batch_size], tx[:batch_size,:], w)
+        grad = mse_gradient(y[:batch_size], tx[:batch_size,:], w)
         
         w = w - gamma * grad
         
     loss = compute_loss(y, tx, w)
-    return losse, w
+    return loss, w
 
 def least_square_loss(tx, y, w):
     e = y - tx @ w.T
@@ -81,33 +81,33 @@ def ridge_regression(tx, y, lambda_):
 def sigmoid(z):
     return 1/(1 + np.exp(-z))
 
-def sigmoid_gradient(z):
-    return (1 - sigmoid(z)) * sigmoid(z)
-
 def logistic_loss(y, x, w):
-    return - np.mean(y * np.log(sigmoid(x @ w.T)) + (np.ones(y.shape[0])-y) * np.log(sigmoid(1 - x @ w.T)))
+    #numerical stability
+    eps = 0
+    loss = -np.mean(y * np.log(pred(x,w)+eps) + (1-y) * np.log(1-pred(x,w)+eps))
+    return loss
 
-def logistic_gradient(y, x, w):
-    return (1 / y.shape[0]) * x.T @ (pred(x, w) - y)
+def logistic_loss_gradient(y, x, w):
+    return np.dot(x.T, (pred(x, w) - y))
 
-def pred(x, w):
-    return sigmoid(x @ w.T)
+def pred(X, w):
+  return sigmoid(np.dot(X, w))
 
 def logistic_gradient_descent(y, tx, init_w, max_iter, gamma, batch_size = 1):
     w = init_w
+    losses = []
     rand_list = np.arange(y.shape[0])
     for i in range(max_iter):
-        if batch_size != 1:
-            np.random.shuffle(rand_list)
-            # randomizing y and tx so we can take the first *batch_size* elements
-            y = y[rand_list]
-            tx = tx[rand_list]
+        np.random.shuffle(rand_list)
+        y = y[rand_list]
+        tx = tx[rand_list]
             
-        grad = logistic_gradient(y, tx, w)
+        grad = logistic_loss_gradient(y[batch_size:], tx[batch_size:], w) / batch_size
         w = w - gamma * grad
         
         loss = logistic_loss(y, tx, w)
-    return loss, w
+        losses.append(loss)
+    return losses, w
 
 def classification(x):
     return np.where(x < 1/2, 0, 1)
@@ -116,7 +116,7 @@ def reg_logistic_loss(y, tx, w, lambda_):
     return logistic_loss(y, tx, w) - (lambda_ / 2) * w.T @ w
 
 def reg_logistic_gradient(y, tx, w, lambda_):
-    return logistic_gradient(y, tx, w) + lambda_* w
+    return logistic_loss_gradient(y, tx, w) + lambda_* w
 
 def reg_gradient_descent(y, tx, lambda_, init_w, max_iter, gamma, batch_size = 1):
     w = init_w
