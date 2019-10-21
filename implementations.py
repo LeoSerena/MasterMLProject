@@ -9,23 +9,15 @@ def standardize(x):
     x = x / std_x
     return x, mean_x, std_x
 
-# MAE & MSE loss
+# MSE loss
 def compute_loss(y, tx, w):
-    e = y - tx @ w
-    loss = e.T @ e / len(y)
-    return loss
+    return np.mean((y - tx @ w) ** 2)
 
 # gradients
 def mse_gradient(y, tx, w):
     e = y - np.dot(tx, w)
-    grad = - np.dot(tx.T, e)
+    grad = -np.dot(tx.T, e)
     return grad
-
-def mae_gradient(y, tx, w):
-    e = y - tx @ w
-    e = np.where(e < 0, 1, -1)
-    e = np.vstack((e,e)).T * tx
-    return np.mean(e, axis = 0)
 
 # least squaresusing full batch gradient descent
 def least_squares_GD(y, tx, initial_w, max_iters, gamma):
@@ -34,7 +26,7 @@ def least_squares_GD(y, tx, initial_w, max_iters, gamma):
     w = initial_w
     for n_iter in range(max_iters):
         grad = mse_gradient(y, tx, w)
-        w = w - gamma * grad
+        w = w - gamma * grad / y.shape[0]
     loss = compute_loss(y, tx, w)
     return w, loss
 
@@ -45,7 +37,7 @@ def least_squares_SGD(y, tx, initial_w, max_iters, gamma):
     for n in np.arange(max_iters):
         k = np.random.randint(len(y))
         y_ = y[k]
-        x_ = tx[k]
+        x_ = tx[k,:]
         
         # compute gradent descent
         grad = mse_gradient(y_, x_, w)
@@ -91,7 +83,7 @@ def pred(X, w):
   return sigmoid(np.dot(X, w))
 
 def logistic_regression(y, tx, initial_w, max_iters, gamma):
-    w = init_w
+    w = initial_w
     losses = []
     for i in range(max_iters):
         n = np.random.randint(len(y))
