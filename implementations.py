@@ -155,7 +155,7 @@ def sigmoid(z):
     output
         Sigmoid(z)
     """
-    return 1/(1 + np.exp(-z))
+    return 1.0/(1 + np.exp(-z))
 
 def logistic_loss(y, x, w):
     """
@@ -168,7 +168,7 @@ def logistic_loss(y, x, w):
     output
         the computed logistic loss
     """
-    eps = 0.0001
+    eps = 0
     loss = -np.mean(y * np.log(pred(x,w)+eps) + (1-y) * np.log(1-pred(x,w)+eps))
     return loss
 
@@ -200,7 +200,7 @@ def pred(X, w):
 
 def logistic_regression(y, tx, initial_w, max_iters, gamma):
     """
-    logistic regression using gradiet descent
+    logistic regression using stochastic gradient descent
     
     input
         y, the labels
@@ -213,12 +213,10 @@ def logistic_regression(y, tx, initial_w, max_iters, gamma):
         loss, the loss corresponding to the last iteration
     """
     w = initial_w
-    losses = []
     for i in range(max_iters):
         n = np.random.randint(len(y))
         y_ = y[n]
         tx_ = tx[n]
-            
         grad = logistic_loss_gradient(y_, tx_, w)
         w = w - gamma * grad
         
@@ -249,7 +247,7 @@ def reg_logistic_loss(y, tx, w, lambda_):
     output
         the computed loss
     """
-    return logistic_loss(y, tx, w) - (lambda_ / 2) * w.T @ w
+    return logistic_loss(y, tx, w) + (lambda_ / 2) * w.T @ w
 
 def reg_logistic_gradient(y, tx, w, lambda_):
     """
@@ -267,7 +265,7 @@ def reg_logistic_gradient(y, tx, w, lambda_):
 
 def reg_logistic_regression(y, tx, lambda_, initial_w, max_iters, gamma):
     """
-    regularized logistic regression using SGD 
+    regularized logistic regression using gradient descent
     
     input
         y, the labels
@@ -281,14 +279,8 @@ def reg_logistic_regression(y, tx, lambda_, initial_w, max_iters, gamma):
         loss, the loss at last iteration
     """
     w = initial_w
-    rand_list = np.arange(y.shape[0])
     for i in range(max_iters):
-        n = np.random.randint(len(y))
-        y_ = y[n]
-        tx_ = tx[n]
-            
-        grad = reg_logistic_gradient(y_, tx_, w, lambda_)
-        w = w - gamma * grad
-        
+        grad = reg_logistic_gradient(y, tx, w, lambda_)
+        w = w - gamma * grad        
     loss = reg_logistic_loss(y, tx, w, lambda_)
     return w, loss
