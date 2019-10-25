@@ -127,7 +127,7 @@ def ridge_regression_loss(y, tx, w, lambda_):
     """
     return compute_loss(y, tx, w) + (lambda_ / 2) * w.T @ w
 
-def ridge_regression(tx, y, lambda_):
+def ridge_regression(y, tx, lambda_):
     """
     finds ridge regression analytical solution
     
@@ -168,7 +168,7 @@ def logistic_loss(y, x, w):
     output
         the computed logistic loss
     """
-    eps = 0
+    eps = 0.0000001
     loss = -np.mean(y * np.log(pred(x,w)+eps) + (1-y) * np.log(1-pred(x,w)+eps))
     return loss
 
@@ -281,6 +281,6 @@ def reg_logistic_regression(y, tx, lambda_, initial_w, max_iters, gamma):
     w = initial_w
     for i in range(max_iters):
         grad = reg_logistic_gradient(y, tx, w, lambda_)
-        w = w - gamma * grad        
+        w = w - gamma * grad
     loss = reg_logistic_loss(y, tx, w, lambda_)
     return w, loss
