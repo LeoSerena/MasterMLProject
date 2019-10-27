@@ -37,6 +37,6 @@
         
 ## RESULTS
 
-    We coded a fully conected neural network to train our dataset and used regularized logistic regression to test out our ideas on data 
+    We coded a fully connected neural network to train our dataset and used regularized logistic regression to test out our ideas on data 
     expansion. We achieved a categorical accuracy of 0.844 and a f1 score of 0.763 on the website. All the details are in the repport.
     

@@ -349,23 +349,6 @@ def preproc(X):
             + (tau_pz + lep_pz + jet_pz + subjet_pz)**2
     inv_mass = np.sqrt(term_1**2 - term_2)
 
-
-    #feature 3: abs angles
-    #der_met_phi_centrality
-#     X[:,11] = np.abs(X[:,11])
-#     #tau phi
-#     X[:,15] = np.abs(X[:,15])
-#     #lep phi
-#     X[:,18] = np.abs(X[:,18])
-#     #met phi
-#     X[:,20] = np.abs(X[:,20])
-#     #lead jet phi
-#     X[:,24] = np.abs(X[:,24])
-#     #sublead jet phi
-#     X[:,27] = np.abs(X[:,27])
-#     #R sep abs
-#     X[:,7] = np.abs(X[:,7])
-
     #feature 9: log
     inv_log_cols = (0,1,2,3,4,5,7,8,9,10,12,13,16,19,21,23,26)
     X_inv_log_cols = np.log(1 / (1 + X[:, inv_log_cols]))
@@ -392,7 +375,6 @@ def preproc(X):
     jets_diff_angle = np.cos(X[:,24]-X[:,27])
     X = np.column_stack((X, jets_diff_angle))
 
-#     X = np.column_stack((X, inv_mass))
     X = make_features(X)
     X = np.column_stack((X, jet_num_0, jet_num_1, jet_num_2, jet_num_3))
     return X
@@ -452,9 +434,18 @@ def make_feature_diff_angles(X):
     X = np.column_stack((X, jets_diff_angle))
     return X
 
-class MLP:    
+class MLP:
+    """
+    Given activation functions and layer sizes, creates an instance of a Multi Layered Perceptrion (MLP), 
+    using BCE as cost function and regularized stochastic gradient descent with batch size one.
+    
+    input
+        gamma, the learning rate of the gradient 
+        dimensions, the dimensions of the layers (Note that the input and the output shape must also be given)
+        activations, the activation functions between the layers, Two possible: relu and sigmoid.
+        weight_decay, the penalizing weight factor
+    """
     #activations: 'relu', 'sigmoid', 'linear'
-    #loss assumed to be BCE
     def __init__(self, gamma = 0.001,  dimensions = [2,10,1], activations = ['relu','sigmoid'] ,weight_decay = 0):
         assert (len(dimensions)-1) == len(activations), "Number of dimensions and activation functions do not match"
         # number of layers of our MLP
@@ -513,6 +504,7 @@ class MLP:
             preds[i] = y_i_proba
         return preds
     
+    # performs the backpropagation computed using the chain rule of derivation
     def back_propagate(self, y,y_pred, a, z):
         
         weights_gradient = {}
@@ -527,15 +519,28 @@ class MLP:
             nabla = nabla @ self.weights[n]
         
         return weights_gradient, bias_gradient
-        ## self.gradient_descent_step(weights_gradient, bias_gradient)
     
-    #weight decay : l2 reg
+    # performs a gradient descent step w_(t+1) = w_t - (grad_w_t +lambda) * gamma 
     def gradient_descent_step(self, weights_gradient, bias_gradient):
         for n in np.arange(1, self.num_layers):
             self.weights[n] = self.weights[n] - self.gamma * (weights_gradient[n] + self.weight_decay*self.weights[n])
             self.bias[n] = self.bias[n] - self.gamma * (bias_gradient[n] + self.weight_decay*self.bias[n])            
     
     def train(self, X, y, max_iter, batch_size = 1, decay = False, decay_rate = 3, decay_iteration = 0):
+        """
+        Main function of the MLP. It performs max_iter regularized stochastic gradient descent steps with batch_size 1.
+        This means that at each iteration, it will randomly select a sample in X, compute its prediction (feedforward),
+        then compute its gradient accross the whole network (backpropagation) and update all the weights of all layers.
+        
+        input
+            X, the samples used for training
+            y, the corresponding labels
+            max_iter, the number of gradient descent steps
+            batch_size, number of samples on which to compute the gradient
+            decay, 
+            decay_rate,
+            decay_iteration,
+        """
         for i in range(max_iter):
             if (decay):
                 if ((i % decay_iteration == 0) and (i != 0)):
@@ -577,7 +582,7 @@ class MLP:
         return loss
 
     def BCE_gradient(self,y,y_pred):
-        #return y_pred-y
+        # eps is added for numerical stability in the log
         eps = 1e-7
         return (-y/(y_pred+eps) + (1-y)/(1-y_pred+eps))
     
