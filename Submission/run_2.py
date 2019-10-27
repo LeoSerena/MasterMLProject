@@ -1,60 +1,18 @@
 import numpy as np
 from implementations import *
-from implementations import MLP
 from proj1_helpers import *
 
 y,X,ids = load_csv_data("train.csv")
 
-#replace missing values with column median
 X = np.where(X == -999., np.nan, X)
-
 y_1 = y[~np.isnan(X).any(axis=1)]
 X_1 = X[~np.isnan(X).any(axis=1)]
 y_2 = y[np.isnan(X).any(axis=1)]
 X_2 = X[np.isnan(X).any(axis=1)]
 
-col_means = np.nanmedian(X_1, axis=0)
-idxs = np.where(np.isnan(X_1))
-X_1[idxs] = np.take(col_means, idxs[1])
+X_1 = preproc(X_1)
+X_2 = preproc(X_2)
 
-col_means = np.nanmedian(X_2, axis=0)
-idxs = np.where(np.isnan(X_2))
-X_2[idxs] = np.take(col_means, idxs[1])
-
-X_1 = make_feature_split_mass(X_1)
-X_1 = make_feature_momentums(X_1)
-X_1 = make_feature_ratios(X_1)
-X_1 = make_feature_diff_angles(X_1)
-
-X_2 = make_feature_split_mass(X_2)
-X_2 = make_feature_momentums(X_2)
-X_2 = make_feature_ratios(X_2)
-X_2 = make_feature_diff_angles(X_2)
-
-#feature 6: categorical PRI_jet_num
-jet_num_0 = (X_1[:,22] == 0).astype(int)
-jet_num_1 = (X_1[:,22] == 1).astype(int)
-jet_num_2 = (X_1[:,22] == 2).astype(int)
-jet_num_3 = (X_1[:,22] == 3).astype(int)
-
-jet_num_0 = (X_2[:,22] == 0).astype(int)
-jet_num_1 = (X_2[:,22] == 1).astype(int)
-jet_num_2 = (X_2[:,22] == 2).astype(int)
-jet_num_3 = (X_2[:,22] == 3).astype(int)
-
-X_1 = standardize(X_1)
-#add bias term
-X_1 = np.column_stack((np.ones(X_1.shape[0]), X_1))
-#add categorical after normalization
-X_1 = np.column_stack((X_1, jet_num_0, jet_num_1, jet_num_2, jet_num_3))
-
-X_2 = standardize(X_2)
-#add bias term
-X_2 = np.column_stack((np.ones(X_2.shape[0]), X_2))
-#add categorical after normalization
-X_2 = np.column_stack((X_2, jet_num_0, jet_num_1, jet_num_2, jet_num_3))
-
-# np.random.shuffle(X)
 cutoff_1 = int(0.8*((X_1.shape)[0]))
 cutoff_2 = int(0.8*((X_2.shape)[0]))
 X_1_train = X_1#[:cutoff_1]
