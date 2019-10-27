@@ -40,22 +40,6 @@ def make_feature_momentums(X):
     X = np.column_stack((X, subjet_px,subjet_py,subjet_pz))
     return X
 
-#feature 3: abs phi angles
-def make_feature_abs_phi(X):
-    #der_met_phi_centrality
-    X[:,11] = np.abs(X[:,11])
-    #tau phi
-    X[:,15] = np.abs(X[:,15])
-    #lep phi
-    X[:,18] = np.abs(X[:,18])
-    #met phi
-    X[:,20] = np.abs(X[:,20])
-    #lead jet phi
-    X[:,24] = np.abs(X[:,24])
-    #sublead jet phi
-    X[:,27] = np.abs(X[:,27])
-    return X
-
 #feature 4: ratios
 def make_feature_ratios(X):
     tau_lep_ratio = X[:,13]/X[:,16]
@@ -175,3 +159,135 @@ def reg_logistic_regression(y, tx, lambda_, initial_w, max_iters, gamma):
         w = w - gamma * grad        
     loss = reg_logistic_loss(y, tx, w, lambda_)
     return w,loss
+
+class MLP:    
+    #activations: 'relu', 'sigmoid', 'linear'
+    #loss assumed to be BCE
+    def __init__(self, gamma = 0.001,  dimensions = [2,10,1], activations = ['relu','sigmoid'] ,weight_decay = 0):
+        assert (len(dimensions)-1) == len(activations), "Number of dimensions and activation functions do not match"
+        # number of layers of our MLP
+        self.num_layers = len(dimensions)
+        self.gamma = gamma
+        self.weight_decay = weight_decay
+        
+        # initialize the weights
+        self.weights = {}
+        self.bias = {}
+        # the first layer is the input data
+        self.activations = {}
+        self.activations_grad = {}
+        
+        for n in np.arange(self.num_layers - 1):
+            # the weights are initialized acccording to a normal distribution and divided by the size of the layer they're on
+            self.weights[n + 1] = np.random.randn(dimensions[n + 1],dimensions[n]) / np.sqrt(dimensions[n])
+            # bias are all initialized to zero
+            self.bias[n + 1] = np.zeros(dimensions[n + 1])
+            
+            if activations[n] == 'relu':
+                self.activations[n+1] = self.relu
+                self.activations_grad[n+1] = self.relu_gradient
+            elif activations[n] == 'sigmoid':
+                self.activations[n+1] = self.sigmoid
+                self.activations_grad[n+1] = self.sigmoid_gradient
+            else:
+                self.activations[n+1] = lambda x : x
+                self.activations_grad[n+1] = lambda x : 1
+    
+    def feed_forward(self, x):        
+        # keep track of all z and a to compute gradient in the backpropagation
+        z = {}
+        # the first layer is the input data
+        a = {1:x}
+        # We compute z[n+1] = a[n] * w[n] + b[n]
+        # and a[n+1] = f(z[n+1]) = f(a[n] * x[n] + b[n]) where * is the inner product
+        for n in np.arange(1, self.num_layers):
+            z[n + 1] = self.weights[n] @ a[n] + self.bias[n]
+            a[n + 1] = self.activations[n](z[n + 1])
+        y_pred = a[n+1]    
+        return y_pred,a, z
+    
+    # returns a prediction
+    def predict(self, X):
+        preds = np.zeros(X.shape[0])
+        for i in range(X.shape[0]):
+            y_i_proba,_,_ = self.feed_forward(X[i].squeeze()) 
+            preds[i] = (y_i_proba > 0.5)
+        return preds
+    
+    def predict_proba(self, X):
+        preds = np.zeros(X.shape[0])
+        for i in range(X.shape[0]):
+            y_i_proba,_,_ = self.feed_forward(X[i].squeeze()) 
+            preds[i] = y_i_proba
+        return preds
+    
+    def back_propagate(self, y,y_pred, a, z):
+        
+        weights_gradient = {}
+        bias_gradient = {}
+        
+        nabla = self.BCE_gradient(y,y_pred)
+        
+        for n in np.flip(np.arange(1, self.num_layers)):
+            nabla = nabla * self.activations_grad[n](z[n+1])
+            weights_gradient[n] = np.outer(nabla, a[n])
+            bias_gradient[n] = nabla
+            nabla = nabla @ self.weights[n]
+        
+        return weights_gradient, bias_gradient
+        ## self.gradient_descent_step(weights_gradient, bias_gradient)
+    
+    #weight decay : l2 reg
+    def gradient_descent_step(self, weights_gradient, bias_gradient):
+        for n in np.arange(1, self.num_layers):
+            self.weights[n] = self.weights[n] - self.gamma * (weights_gradient[n] + self.weight_decay*self.weights[n])
+            self.bias[n] = self.bias[n] - self.gamma * (bias_gradient[n] + self.weight_decay*self.bias[n])            
+    
+    def train(self, X, y, max_iter, batch_size = 1, decay = False, decay_rate = 3, decay_iteration = 0):
+        for i in range(max_iter):
+            if (decay):
+                if ((i % decay_iteration == 0) and (i != 0)):
+                    print("Iteration: {}".format(i))
+                    print("Decay, lr : {}".format(self.gamma))
+                    self.gamma = self.gamma/decay_rate
+                    print("Decay, lr : {}".format(self.gamma))
+                    print("")
+            idxs = np.random.randint(0, X.shape[0],batch_size)
+            X_batch = X[idxs].squeeze()
+            y_batch = y[idxs]
+            y_pred,a, z = self.feed_forward(X_batch)
+            weights_gradient, bias_gradient = self.back_propagate(y_batch,y_pred,a, z)
+            self.gradient_descent_step(weights_gradient, bias_gradient)
+            if ((i % int(max_iter/5)) == 0):
+                loss = self.BCE_loss(X,y)
+                print("Iteration : {}, loss : {}".format(i,loss))
+        loss = self.BCE_loss(X,y)
+        print("Iteration : {}, loss : {}".format(i,loss))
+        return loss
+    
+    def sigmoid_gradient(self,z):
+        return sigmoid(z) * (1 - sigmoid(z))
+
+    def relu(self,z):
+        return np.where(z < 0, 0, z)
+
+    def relu_gradient(self, z):
+        return np.where(z < 0, 0, 1)
+
+    def BCE_loss(self,X, y):
+        loss = 0
+        N = len(y)
+        eps = 1e-7
+        for i in range(N):
+            y_pred,_,_ = self.feed_forward(X[i])
+            loss_i = -(y[i]*np.log(y_pred+eps) + (1-y[i])*np.log(1-y_pred+eps))
+            loss = loss + loss_i/N
+        return loss
+
+    def BCE_gradient(self,y,y_pred):
+        #return y_pred-y
+        eps = 1e-7
+        return (-y/(y_pred+eps) + (1-y)/(1-y_pred+eps))
+    
+    def sigmoid(self,z):
+        return 1.0/(1 + np.exp(-z))
