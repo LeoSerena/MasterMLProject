@@ -484,8 +484,8 @@ class MLP:
     def train(self, X, y, max_iter, batch_size = 1, decay = False, decay_rate = 3, decay_iteration = 0):
         """
         Main function of the MLP. It performs max_iter stochastic gradient descent steps with batch_size 1.
-        This means that at each iteration, it will randomly select a sample in X, compute its prediction (feedforward),
-        then compute its gradient accross the whole network (backpropagation) and update all the weights of all layers.
+        At each iteration, it samples an example in X uniformly at random, computes the forward pass, and updates
+        the weights using the gradients computed by the backward pass.
         
         input
             X, the samples used for training
@@ -495,6 +495,8 @@ class MLP:
             decay, whether to use learning rate decay
             decay_rate, the factor by which the learning rate is decays
             decay_iteration, every how many steps the learning rate is decayed
+        output
+            loss, the binary cross-entropy loss
         """
         for i in range(max_iter):
             if (decay):
