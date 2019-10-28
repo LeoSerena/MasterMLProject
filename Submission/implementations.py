@@ -201,7 +201,7 @@ def pred(x, w):
 #LR with GD
 def logistic_regression(y, tx, initial_w, max_iters, gamma):
     """
-    logistic regression using stochastic gradient descent
+    logistic regression using gradient descent
     
     input
         y, the labels
