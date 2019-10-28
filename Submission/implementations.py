@@ -277,7 +277,7 @@ def reg_logistic_regression(y, tx, lambda_, initial_w, max_iters, gamma):
     """
     w = initial_w
     for i in range(max_iters):
-        grad = reg_logistic_gradient(y, tx, w, lambda_)
+        grad = (1 / y.shape[0]) * reg_logistic_gradient(y, tx, w, lambda_)
         w = w - gamma * grad        
     loss = reg_logistic_loss(y, tx, w, lambda_)
     return w,loss
