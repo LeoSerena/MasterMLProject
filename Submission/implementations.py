@@ -302,23 +302,17 @@ def standardize(x):
     x = x / std_x
     return x, mean_x, std_x
 
-def preproc(X):
-    for i in range(X.shape[1]):
-        if (np.isnan(X[:,i]).all()):
-            X[:,i] = 0
-        else:
-            col_means = np.nanmedian(X[:,i])
-            idxs = np.where(np.isnan(X[:,i]))
-            X[idxs,i] = col_means
-
-#     feature 1: correlations der_mass_MMC
+def make_feature_1(X):
+    #     feature 1: correlations der_mass_MMC
     X_gt_mmc = np.array(X[:,0], copy=True)
     # X_0_cop = np.array(X[:,0], copy=True)
     X_gt_mmc[X_gt_mmc <= 140] = 140
     # X = np.column_stack((X, X_gt_mmc))
     X[:,0][X[:,0] > 140] = 140
     X = np.column_stack((X, X_gt_mmc))
+    return X
 
+def make_feature_2(X):
     #feature 2: add momentums
     #tau momentum
     tau_px = X[:,13]*np.cos(X[:,15])
@@ -344,31 +338,50 @@ def preproc(X):
     subjet_pz = X[:,26]*np.sinh(X[:,27])
     subjet_mod = X[:,26]*np.cosh(X[:,27])
     X = np.column_stack((X, subjet_px,subjet_py,subjet_pz,subjet_mod))
+    return X
 
-
-    #feature 8: total invariant mass
+def make_feature_3(X):
+    #feature 3: total invariant mass
     term_1 = np.sqrt(tau_px**2 + tau_py**2 + tau_pz**2) + np.sqrt(lep_px**2 + lep_py**2 + lep_pz**2) \
     + np.sqrt(jet_px**2 + jet_py**2 + jet_pz**2) + np.sqrt(subjet_px**2 + subjet_py**2 + subjet_pz**2)
     term_2 = (tau_px + lep_px + jet_px + subjet_px)**2 + (tau_py + lep_py + jet_py + subjet_py)**2 \
             + (tau_pz + lep_pz + jet_pz + subjet_pz)**2
     inv_mass = np.sqrt(term_1**2 - term_2)
     X = np.column_stack((X, inv_mass))
+    return X
 
-#     feature 9: inverse log
+def make_feature_4(X):
+    #     feature 4: inverse log
     inv_log_cols = [0,1,2,3,4,5,7,8,9,10,12,13,16,19,21,23,26]
     X_inv_log_cols = np.log(1 / (1 + X[:, inv_log_cols]))
     X = np.hstack((X, X_inv_log_cols))
+    return X
 
-
+def make_feature_5(X):
     # #feature 5: pt ratios
     # #tau_lep_ratio = PRI_tau_pt/PRI_lep_pt
     tau_lep_ratio = X[:,13]/X[:,16]
     # #met_tot_ratio = PRI_met/PRI_met_sumet
     met_tot_ratio = X[:,19]/X[:,21]
     X = np.column_stack((X, tau_lep_ratio,met_tot_ratio))
+    return X
+    
 
-    #X = make_features(X)
-    X = make_features_2(X)
+def preproc(X):
+    for i in range(X.shape[1]):
+        if (np.isnan(X[:,i]).all()):
+            X[:,i] = 0
+        else:
+            col_means = np.nanmedian(X[:,i])
+            idxs = np.where(np.isnan(X[:,i]))
+            X[idxs,i] = col_means
+
+    X = make_feature_1(X)
+    X = make_feature_2(X)
+    X = make_feature_3(X)
+    X = make_feature_4(X)
+    X = make_feature_5(X)
+    
     return X
 
 def make_features(X):
