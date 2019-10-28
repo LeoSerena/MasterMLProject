@@ -295,31 +295,31 @@ def make_feature_mass(X):
 
 #add momentum and modulues values and estimated total invariant mass. See report for more details.
 def make_feature_moms_inv_mass(X):
-    #tau momentum
+    #tau momentum and modulus
     tau_px = X[:,13]*np.cos(X[:,15])
     tau_py = X[:,13]*np.sin(X[:,15])
     tau_pz = X[:,13]*np.sinh(X[:,14])
     tau_mod = X[:,13]*np.cosh(X[:,14])
     X = np.column_stack((X, tau_px,tau_py,tau_pz,tau_mod))
-    #lep momentum
+    #lep momentum and modulus
     lep_px = X[:,16]*np.cos(X[:,18])
     lep_py = X[:,16]*np.sin(X[:,18])
     lep_pz = X[:,16]*np.sinh(X[:,17])
     lep_mod = X[:,16]*np.cosh(X[:,17])
     X = np.column_stack((X, lep_px,lep_py,lep_pz,lep_mod))
-    #leading jet momentum
+    #leading jet momentum and modulus
     jet_px = X[:,23]*np.cos(X[:,25])
     jet_py = X[:,23]*np.sin(X[:,25])
     jet_pz = X[:,23]*np.sinh(X[:,24])
     jet_mod = X[:,23]*np.cosh(X[:,24])
     X = np.column_stack((X, jet_px,jet_py,jet_pz,jet_mod))
-    #subleading jet momentum
+    #subleading jet momentum and modulus
     subjet_px = X[:,26]*np.cos(X[:,28])
     subjet_py = X[:,26]*np.sin(X[:,28])
     subjet_pz = X[:,26]*np.sinh(X[:,27])
     subjet_mod = X[:,26]*np.cosh(X[:,27])
     X = np.column_stack((X, subjet_px,subjet_py,subjet_pz,subjet_mod))
-    #feature 3: total invariant mass
+    #add total invariant mass
     term_1 = np.sqrt(tau_px**2 + tau_py**2 + tau_pz**2) + np.sqrt(lep_px**2 + lep_py**2 + lep_pz**2) \
     + np.sqrt(jet_px**2 + jet_py**2 + jet_pz**2) + np.sqrt(subjet_px**2 + subjet_py**2 + subjet_pz**2)
     term_2 = (tau_px + lep_px + jet_px + subjet_px)**2 + (tau_py + lep_py + jet_py + subjet_py)**2 \
