@@ -33,7 +33,7 @@
         
         -python run.py-
         
-    on a command prompt. It will generate the submission.csv.
+    on a command prompt. It will generate the submission.csv. It took us 40-60 min approximately to generate the submission file.
         
 ## RESULTS
 
