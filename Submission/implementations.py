@@ -282,63 +282,41 @@ def reg_logistic_regression(y, tx, lambda_, initial_w, max_iters, gamma):
     loss = reg_logistic_loss(y, tx, w, lambda_)
     return w,loss
 
-def standardize(x):
-    """
-    normalization of the data
-    
-    input
-        x, data to be normalized
-    output
-        x, the normalized data
-        mean_x, mean of the data column
-        std_x, standard deviation of the data
-        """
-    mean_x = np.nanmean(x, axis = 0)
-    x = x - mean_x
-    std_x = np.nanstd(x, axis = 0)
-    x = x / std_x
-    return x, mean_x, std_x
-
-def make_feature_1(X):
-    #     feature 1: correlations der_mass_MMC
+#split DER_mass_mcc in two features, and floor or caps each by 140. See report for more details.
+def make_feature_mass(X):
     X_gt_mmc = np.array(X[:,0], copy=True)
-    # X_0_cop = np.array(X[:,0], copy=True)
     X_gt_mmc[X_gt_mmc <= 140] = 140
-    # X = np.column_stack((X, X_gt_mmc))
     X[:,0][X[:,0] > 140] = 140
     X = np.column_stack((X, X_gt_mmc))
     return X
 
-def make_feature_2(X):
-    #feature 2: add momentums
-    #tau momentum
+#add momentum and modulues values and estimated total invariant mass. See report for more details.
+def make_feature_moms_inv_mass(X):
+    #tau momentum and modulus
     tau_px = X[:,13]*np.cos(X[:,15])
     tau_py = X[:,13]*np.sin(X[:,15])
     tau_pz = X[:,13]*np.sinh(X[:,14])
     tau_mod = X[:,13]*np.cosh(X[:,14])
     X = np.column_stack((X, tau_px,tau_py,tau_pz,tau_mod))
-    #lep momentum
+    #lep momentum and modulus
     lep_px = X[:,16]*np.cos(X[:,18])
     lep_py = X[:,16]*np.sin(X[:,18])
     lep_pz = X[:,16]*np.sinh(X[:,17])
     lep_mod = X[:,16]*np.cosh(X[:,17])
     X = np.column_stack((X, lep_px,lep_py,lep_pz,lep_mod))
-    #leading jet momentum
+    #leading jet momentum and modulus
     jet_px = X[:,23]*np.cos(X[:,25])
     jet_py = X[:,23]*np.sin(X[:,25])
     jet_pz = X[:,23]*np.sinh(X[:,24])
     jet_mod = X[:,23]*np.cosh(X[:,24])
     X = np.column_stack((X, jet_px,jet_py,jet_pz,jet_mod))
-    #subleading jet momentum
+    #subleading jet momentum and modulus
     subjet_px = X[:,26]*np.cos(X[:,28])
     subjet_py = X[:,26]*np.sin(X[:,28])
     subjet_pz = X[:,26]*np.sinh(X[:,27])
     subjet_mod = X[:,26]*np.cosh(X[:,27])
     X = np.column_stack((X, subjet_px,subjet_py,subjet_pz,subjet_mod))
-    return X
-
-def make_feature_3(X):
-    #feature 3: total invariant mass
+    #add total invariant mass
     term_1 = np.sqrt(tau_px**2 + tau_py**2 + tau_pz**2) + np.sqrt(lep_px**2 + lep_py**2 + lep_pz**2) \
     + np.sqrt(jet_px**2 + jet_py**2 + jet_pz**2) + np.sqrt(subjet_px**2 + subjet_py**2 + subjet_pz**2)
     term_2 = (tau_px + lep_px + jet_px + subjet_px)**2 + (tau_py + lep_py + jet_py + subjet_py)**2 \
@@ -347,15 +325,16 @@ def make_feature_3(X):
     X = np.column_stack((X, inv_mass))
     return X
 
-def make_feature_4(X):
+#add inverse of log of features + 1 for stability.
+def make_feature_inv_log(X):
     #     feature 4: inverse log
-    inv_log_cols = [0,1,2,3,4,5,7,8,9,10,12,13,16,19,21,23,26]
-    X_inv_log_cols = np.log(1 / (1 + X[:, inv_log_cols]))
-    X = np.hstack((X, X_inv_log_cols))
+    log_cols = [0,1,2,3,4,5,7,8,9,10,12,13,16,19,21,23,26]
+    X_log_cols = np.log(1 / (1 + X[:, log_cols]))
+    X = np.hstack((X, X_log_cols))
     return X
 
-def make_feature_5(X):
-    # #feature 5: pt ratios
+#add 2 ratios
+def make_feature_ratios(X):
     # #tau_lep_ratio = PRI_tau_pt/PRI_lep_pt
     tau_lep_ratio = X[:,13]/X[:,16]
     # #met_tot_ratio = PRI_met/PRI_met_sumet
@@ -365,6 +344,7 @@ def make_feature_5(X):
     
 
 def preproc(X):
+    #if column is all nan, set to 0, otherwise replace nans with column median
     for i in range(X.shape[1]):
         if (np.isnan(X[:,i]).all()):
             X[:,i] = 0
@@ -373,92 +353,46 @@ def preproc(X):
             idxs = np.where(np.isnan(X[:,i]))
             X[idxs,i] = col_means
 
-    X = make_feature_1(X)
-    X = make_feature_2(X)
-    X = make_feature_3(X)
-    X = make_feature_4(X)
-    X = make_feature_5(X)
+    #generate features
+    X = make_feature_mass(X)
+    X = make_feature_moms_inv_mass(X)
+    X = make_feature_inv_log(X)
+    X = make_feature_ratios(X)
+    
+    X = normalize(X)
     
     return X
 
-def make_features(X):
-    # converting -999. to nan to use np.nanmean and np.nanstd
-    X = np.where(X == -999., np.nan, X)
-    # standardizing the data Xd = (X_d - E[X_d])/(std(X_d))
-    X, means, stds = standardize(X)
-    # since data is standirdized, the mean is more or less 0 for each feature so replacing by zero is reasonable and helps computations
-    X = np.where(np.isnan(X), 0, X)
-    # adding the 1 padding
-    return np.column_stack((np.ones(X.shape[0]), X))
 
-def make_features_2(X):
+#normalize columns; set to 0 if var = 0; add bias
+def normalize(X):
+    """
+    normalizes the data or sets the column to 0 if the standard deviation is 0.
+    
+    input
+       x, data to be normalized
+    output
+       x, the normalized data
+    """
+    #set to 0 if column has no variance
     for i in range(X.shape[1]):
         if (X[:,i].std() == 0):
             X[:,i] = 0
         else:
             X[:,i] = (X[:,i] - X[:,i].mean()) / X[:,i].std()
-#     X, means, stds = standardize(X)
-#     X = (X-X.nanmean())/X.nanstd()
-    # since data is standirdized, the mean is more or less 0 for each feature so replacing by zero is reasonable and helps computations
-    X = np.where(np.isnan(X), 0, X)
-    # adding the 1 padding
     return np.column_stack((np.ones(X.shape[0]), X))
-
-# feature 1 : split der_mass
-def make_feature_split_mass(X):
-    X_gt_mmc = np.array(X[:,0], copy=True)
-    X_gt_mmc[X_gt_mmc <= 140] = 140
-    X[:,0][X[:,0] > 140] = 140
-    X = np.column_stack((X, X_gt_mmc))
-    return X
-
-# feature 2 : add momentums
-def make_feature_momentums(X):
-    #add tau momentums
-    tau_px = X[:,13]*np.cos(X[:,15])
-    tau_py = X[:,13]*np.sin(X[:,15])
-    tau_pz = X[:,13]*np.sinh(X[:,14])
-    X = np.column_stack((X, tau_px,tau_py,tau_pz))
-    #add lep momentums
-    lep_px = X[:,16]*np.cos(X[:,18])
-    lep_py = X[:,16]*np.cos(X[:,18])
-    lep_pz = X[:,16]*np.cos(X[:,17])
-    X = np.column_stack((X, lep_px,lep_py,lep_pz))
-    #add leading jet momentums
-    jet_px = X[:,23]*np.cos(X[:,25])
-    jet_py = X[:,23]*np.cos(X[:,25])
-    jet_pz = X[:,23]*np.cos(X[:,24])
-    X = np.column_stack((X, jet_px,jet_py,jet_pz))
-    #add subleading jet momentums
-    subjet_px = X[:,26]*np.cos(X[:,28])
-    subjet_py = X[:,26]*np.cos(X[:,28])
-    subjet_pz = X[:,26]*np.cos(X[:,27])
-    X = np.column_stack((X, subjet_px,subjet_py,subjet_pz))
-    return X
-
-#feature 4: ratios
-def make_feature_ratios(X):
-    tau_lep_ratio = X[:,13]/X[:,16]
-    met_tot_ratio = X[:,19]/X[:,21]
-    X = np.column_stack((X, tau_lep_ratio,met_tot_ratio))
-    return X
-
-#feature 5: jets_diff_angle
-def make_feature_diff_angles(X):
-    jets_diff_angle = np.cos(X[:,24]-X[:,27])
-    X = np.column_stack((X, jets_diff_angle))
-    return X
 
 class MLP:
     """
-    Given activation functions and layer sizes, creates an instance of a Multi Layered Perceptrion (MLP), 
-    using BCE as cost function and regularized stochastic gradient descent with batch size one.
+    Creates a fully connected neural network with given layer size and activation functions. The loss function is
+    binary cross-entropy with L2 regularization (weight decay). It supports stochastic gradient descent with batch
+    size of 1.
     
     input
-        gamma, the learning rate of the gradient 
-        dimensions, the dimensions of the layers (Note that the input and the output shape must also be given)
-        activations, the activation functions between the layers, Two possible: relu and sigmoid.
-        weight_decay, the penalizing weight factor
+        gamma, the learning rate used for gradient descent
+        dimensions, the dimensions of the layers (including input and output)
+        activations, the activation functions used for each layer. Either 'relu', 'sigmoid' or 'linear'
+        weight_decay, the amount of L2 regularization
     """
     #activations: 'relu', 'sigmoid', 'linear'
     def __init__(self, gamma = 0.001,  dimensions = [2,10,1], activations = ['relu','sigmoid'] ,weight_decay = 0):
@@ -492,6 +426,7 @@ class MLP:
                 self.activations_grad[n+1] = lambda x : 1
     
     
+    #compute forward pass for an example
     def feed_forward(self, x):        
         # keep track of all z and a to compute gradient in the backpropagation
         z = {}
@@ -505,7 +440,7 @@ class MLP:
         y_pred = a[n+1]    
         return y_pred,a, z
     
-    # returns a prediction
+    # return predictions for input examples
     def predict(self, X):
         preds = np.zeros(X.shape[0])
         for i in range(X.shape[0]):
@@ -513,6 +448,7 @@ class MLP:
             preds[i] = (y_i_proba > 0.5)
         return preds
     
+    # return estimated probabilities for input examples
     def predict_proba(self, X):
         preds = np.zeros(X.shape[0])
         for i in range(X.shape[0]):
@@ -520,7 +456,7 @@ class MLP:
             preds[i] = y_i_proba
         return preds
     
-    # performs the backpropagation computed using the chain rule of derivation
+    # compute gradients using backpropagation
     def back_propagate(self, y,y_pred, a, z):
         
         weights_gradient = {}
@@ -536,7 +472,7 @@ class MLP:
         
         return weights_gradient, bias_gradient
     
-    # performs a gradient descent step w_(t+1) = w_t - (grad_w_t +lambda) * gamma 
+    # performs a gradient descent step and apply L2 regularization
     def gradient_descent_step(self, weights_gradient, bias_gradient):
         for n in np.arange(1, self.num_layers):
             self.weights[n] = self.weights[n] - self.gamma * (weights_gradient[n] + self.weight_decay*self.weights[n])
@@ -544,18 +480,20 @@ class MLP:
     
     def train(self, X, y, max_iter, batch_size = 1, decay = False, decay_rate = 3, decay_iteration = 0):
         """
-        Main function of the MLP. It performs max_iter regularized stochastic gradient descent steps with batch_size 1.
-        This means that at each iteration, it will randomly select a sample in X, compute its prediction (feedforward),
-        then compute its gradient accross the whole network (backpropagation) and update all the weights of all layers.
+        Main function of the MLP. It performs max_iter stochastic gradient descent steps with batch_size 1.
+        At each iteration, it samples an example in X uniformly at random, computes the forward pass, and updates
+        the weights using the gradients computed by the backward pass.
         
         input
             X, the samples used for training
             y, the corresponding labels
             max_iter, the number of gradient descent steps
             batch_size, number of samples on which to compute the gradient
-            decay, 
-            decay_rate,
-            decay_iteration,
+            decay, whether to use learning rate decay
+            decay_rate, the factor by which the learning rate is decays
+            decay_iteration, every how many steps the learning rate is decayed
+        output
+            loss, the binary cross-entropy loss
         """
         for i in range(max_iter):
             if (decay):
@@ -588,6 +526,7 @@ class MLP:
         return np.where(z < 0, 0, 1)
 
     def BCE_loss(self,X, y):
+        # eps is added for numerical stability in the log
         loss = 0
         N = len(y)
         eps = 1e-7

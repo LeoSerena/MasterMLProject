@@ -1,26 +1,26 @@
 # TEAM DISPATCHED: Nicolas Brandt, Leo Serena, Rodrigo Granja
 
-## description
+## DESCRIPTION
 
-    this folder contains the result file of the EPFL Machine Learning Higgs 2019 contest.
-    website: https://www.aicrowd.com/challenges/epfl-machine-learning-higgs-2019.
+    This folder contains the result file of the EPFL Machine Learning Higgs 2019 contest.
+    Website: https://www.aicrowd.com/challenges/epfl-machine-learning-higgs-2019.
     It contains the following files:
         
         - run.py:
-            script used to generate the submited file of team dispatched
+            script used to generate the submitted file of team dispatched
             
         - implementations.py:
             contains all the methods used in the run.py script and some mandatory basic machine learning functions
             
         - proj1_helpers.py:
-            contains all the methods regarding data import
+            contains methods regarding data import and csv generation
             
         - MLproj1
-            repport giving all detail informations on the results
+            report giving all detail informations on the results
         
 ## USAGE
     
-    assuming python is installed, install numpy (if not already installed):
+    Assuming python is installed, install numpy (if not already installed):
         
         -pip install numpy-
         
