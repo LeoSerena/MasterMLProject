@@ -32,7 +32,7 @@ def mse_gradient(y, tx, w):
         the vectorized gradient for each w
     """
     e = y - tx @ w
-    grad = -(1/y.shape[0]) * tx.T @ e
+    grad = -np.dot(tx.T, e)
     return grad
 
 def least_squares_GD(y, tx, initial_w, max_iters, gamma):
@@ -51,7 +51,7 @@ def least_squares_GD(y, tx, initial_w, max_iters, gamma):
     """
     w = initial_w
     for i in range(max_iters):
-        grad = mse_gradient(y, tx, w)
+        grad = mse_gradient(y, tx, w) / len(y)
         w = w - gamma * grad
     loss = compute_loss(y, tx, w)
     return w, loss
@@ -97,7 +97,7 @@ def least_square_loss(tx, y, w):
     e = y - tx @ w.T
     return (1/y.shape[0]) * e @ e.T
 
-def least_squares(tx, y):
+def least_squares(y, tx):
     """
     finds least squares analytical solution
     
@@ -128,7 +128,7 @@ def ridge_regression_loss(tx, y, w, lambda_):
     """
     return least_square_loss(tx, y, w) + lambda_ * w.T @ w
 
-def ridge_regression(tx, y, lambda_):
+def ridge_regression(y, tx, lambda_):
     """
     finds ridge regression analytical solution
     
@@ -277,9 +277,6 @@ def reg_logistic_regression(y, tx, lambda_, initial_w, max_iters, gamma):
     """
     w = initial_w
     for i in range(max_iters):
-        if (i % 100 == 0) and (i != 0):
-            loss = reg_logistic_loss(y, tx, w,lambda_)
-            print("Iteration:{}, loss : {}".format(i,loss))
         grad = reg_logistic_gradient(y, tx, w, lambda_)
         w = w - gamma * grad        
     loss = reg_logistic_loss(y, tx, w, lambda_)
