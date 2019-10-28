@@ -16,7 +16,7 @@
             contains all the methods regarding data import
             
         - MLproj1
-            repport giving all detail informations on the results
+            report giving all detail informations on the results
         
 ## USAGE
     

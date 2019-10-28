@@ -6,7 +6,7 @@ from proj1_helpers import *
 y,X,ids = load_csv_data("train.csv")
 X = np.where(X == -999., np.nan, X)
 
-#select indices correspond to different values of 
+#select indices correspond to different values of PRI_jet_num
 cnd_1 = X[:,22] == 0
 cnd_2 = X[:,22] == 1
 cnd_3 = X[:,22] == 2

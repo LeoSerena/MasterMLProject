@@ -285,34 +285,15 @@ def reg_logistic_regression(y, tx, lambda_, initial_w, max_iters, gamma):
     loss = reg_logistic_loss(y, tx, w, lambda_)
     return w,loss
 
-def standardize(x):
-    """
-    normalization of the data
-    
-    input
-        x, data to be normalized
-    output
-        x, the normalized data
-        mean_x, mean of the data column
-        std_x, standard deviation of the data
-        """
-    mean_x = np.nanmean(x, axis = 0)
-    x = x - mean_x
-    std_x = np.nanstd(x, axis = 0)
-    x = x / std_x
-    return x, mean_x, std_x
-
-def make_feature_1(X):
+def make_feature_mass(X):
     #     feature 1: correlations der_mass_MMC
     X_gt_mmc = np.array(X[:,0], copy=True)
-    # X_0_cop = np.array(X[:,0], copy=True)
     X_gt_mmc[X_gt_mmc <= 140] = 140
-    # X = np.column_stack((X, X_gt_mmc))
     X[:,0][X[:,0] > 140] = 140
     X = np.column_stack((X, X_gt_mmc))
     return X
 
-def make_feature_2(X):
+def make_feature_moms_inv_mass(X):
     #feature 2: add momentums
     #tau momentum
     tau_px = X[:,13]*np.cos(X[:,15])
@@ -338,9 +319,6 @@ def make_feature_2(X):
     subjet_pz = X[:,26]*np.sinh(X[:,27])
     subjet_mod = X[:,26]*np.cosh(X[:,27])
     X = np.column_stack((X, subjet_px,subjet_py,subjet_pz,subjet_mod))
-    return X
-
-def make_feature_3(X):
     #feature 3: total invariant mass
     term_1 = np.sqrt(tau_px**2 + tau_py**2 + tau_pz**2) + np.sqrt(lep_px**2 + lep_py**2 + lep_pz**2) \
     + np.sqrt(jet_px**2 + jet_py**2 + jet_pz**2) + np.sqrt(subjet_px**2 + subjet_py**2 + subjet_pz**2)
@@ -350,14 +328,14 @@ def make_feature_3(X):
     X = np.column_stack((X, inv_mass))
     return X
 
-def make_feature_4(X):
+def make_feature_inv_log(X):
     #     feature 4: inverse log
     inv_log_cols = [0,1,2,3,4,5,7,8,9,10,12,13,16,19,21,23,26]
     X_inv_log_cols = np.log(1 / (1 + X[:, inv_log_cols]))
     X = np.hstack((X, X_inv_log_cols))
     return X
 
-def make_feature_5(X):
+def make_feature_ratios(X):
     # #feature 5: pt ratios
     # #tau_lep_ratio = PRI_tau_pt/PRI_lep_pt
     tau_lep_ratio = X[:,13]/X[:,16]
@@ -368,6 +346,7 @@ def make_feature_5(X):
     
 
 def preproc(X):
+    #if column is all nan, set to 0, otherwise replace nans with column median
     for i in range(X.shape[1]):
         if (np.isnan(X[:,i]).all()):
             X[:,i] = 0
@@ -376,81 +355,36 @@ def preproc(X):
             idxs = np.where(np.isnan(X[:,i]))
             X[idxs,i] = col_means
 
-    X = make_feature_1(X)
-    X = make_feature_2(X)
-    X = make_feature_3(X)
-    X = make_feature_4(X)
-    X = make_feature_5(X)
+    #generate features
+    X = make_feature_mass(X)
+    X = make_feature_moms_inv_mass(X)
+    X = make_feature_inv_log(X)
+    X = make_feature_ratios(X)
+    
+    X = normalize(X)
     
     return X
 
-def make_features(X):
-    # converting -999. to nan to use np.nanmean and np.nanstd
-    X = np.where(X == -999., np.nan, X)
-    # standardizing the data Xd = (X_d - E[X_d])/(std(X_d))
-    X, means, stds = standardize(X)
-    # since data is standirdized, the mean is more or less 0 for each feature so replacing by zero is reasonable and helps computations
-    X = np.where(np.isnan(X), 0, X)
-    # adding the 1 padding
-    return np.column_stack((np.ones(X.shape[0]), X))
 
-def make_features_2(X):
+#normalize columns; set to 0 if var = 0; add bias
+def normalize(X):
+    """
+    normalization of the data
+    
+    input
+       x, data to be normalized
+    output
+       x, the normalized data
+       mean_x, mean of the data column
+       std_x, standard deviation of the data
+    """
+    #set to 0 if column has no variance
     for i in range(X.shape[1]):
         if (X[:,i].std() == 0):
             X[:,i] = 0
         else:
             X[:,i] = (X[:,i] - X[:,i].mean()) / X[:,i].std()
-#     X, means, stds = standardize(X)
-#     X = (X-X.nanmean())/X.nanstd()
-    # since data is standirdized, the mean is more or less 0 for each feature so replacing by zero is reasonable and helps computations
-    X = np.where(np.isnan(X), 0, X)
-    # adding the 1 padding
     return np.column_stack((np.ones(X.shape[0]), X))
-
-# feature 1 : split der_mass
-def make_feature_split_mass(X):
-    X_gt_mmc = np.array(X[:,0], copy=True)
-    X_gt_mmc[X_gt_mmc <= 140] = 140
-    X[:,0][X[:,0] > 140] = 140
-    X = np.column_stack((X, X_gt_mmc))
-    return X
-
-# feature 2 : add momentums
-def make_feature_momentums(X):
-    #add tau momentums
-    tau_px = X[:,13]*np.cos(X[:,15])
-    tau_py = X[:,13]*np.sin(X[:,15])
-    tau_pz = X[:,13]*np.sinh(X[:,14])
-    X = np.column_stack((X, tau_px,tau_py,tau_pz))
-    #add lep momentums
-    lep_px = X[:,16]*np.cos(X[:,18])
-    lep_py = X[:,16]*np.cos(X[:,18])
-    lep_pz = X[:,16]*np.cos(X[:,17])
-    X = np.column_stack((X, lep_px,lep_py,lep_pz))
-    #add leading jet momentums
-    jet_px = X[:,23]*np.cos(X[:,25])
-    jet_py = X[:,23]*np.cos(X[:,25])
-    jet_pz = X[:,23]*np.cos(X[:,24])
-    X = np.column_stack((X, jet_px,jet_py,jet_pz))
-    #add subleading jet momentums
-    subjet_px = X[:,26]*np.cos(X[:,28])
-    subjet_py = X[:,26]*np.cos(X[:,28])
-    subjet_pz = X[:,26]*np.cos(X[:,27])
-    X = np.column_stack((X, subjet_px,subjet_py,subjet_pz))
-    return X
-
-#feature 4: ratios
-def make_feature_ratios(X):
-    tau_lep_ratio = X[:,13]/X[:,16]
-    met_tot_ratio = X[:,19]/X[:,21]
-    X = np.column_stack((X, tau_lep_ratio,met_tot_ratio))
-    return X
-
-#feature 5: jets_diff_angle
-def make_feature_diff_angles(X):
-    jets_diff_angle = np.cos(X[:,24]-X[:,27])
-    X = np.column_stack((X, jets_diff_angle))
-    return X
 
 class MLP:
     """
@@ -591,6 +525,7 @@ class MLP:
         return np.where(z < 0, 0, 1)
 
     def BCE_loss(self,X, y):
+        # eps is added for numerical stability in the log
         loss = 0
         N = len(y)
         eps = 1e-7
