@@ -285,16 +285,16 @@ def reg_logistic_regression(y, tx, lambda_, initial_w, max_iters, gamma):
     loss = reg_logistic_loss(y, tx, w, lambda_)
     return w,loss
 
+#split DER_mass_mcc in two features, and floor or caps each by 140. See report for more details.
 def make_feature_mass(X):
-    #     feature 1: correlations der_mass_MMC
     X_gt_mmc = np.array(X[:,0], copy=True)
     X_gt_mmc[X_gt_mmc <= 140] = 140
     X[:,0][X[:,0] > 140] = 140
     X = np.column_stack((X, X_gt_mmc))
     return X
 
+#add momentum and modulues values and estimated total invariant mass. See report for more details.
 def make_feature_moms_inv_mass(X):
-    #feature 2: add momentums
     #tau momentum
     tau_px = X[:,13]*np.cos(X[:,15])
     tau_py = X[:,13]*np.sin(X[:,15])
@@ -328,15 +328,16 @@ def make_feature_moms_inv_mass(X):
     X = np.column_stack((X, inv_mass))
     return X
 
+#add inverse of log of features + 1 for stability.
 def make_feature_inv_log(X):
     #     feature 4: inverse log
-    inv_log_cols = [0,1,2,3,4,5,7,8,9,10,12,13,16,19,21,23,26]
-    X_inv_log_cols = np.log(1 / (1 + X[:, inv_log_cols]))
-    X = np.hstack((X, X_inv_log_cols))
+    log_cols = [0,1,2,3,4,5,7,8,9,10,12,13,16,19,21,23,26]
+    X_log_cols = np.log(1 / (1 + X[:, log_cols]))
+    X = np.hstack((X, X_log_cols))
     return X
 
+#add 2 ratios
 def make_feature_ratios(X):
-    # #feature 5: pt ratios
     # #tau_lep_ratio = PRI_tau_pt/PRI_lep_pt
     tau_lep_ratio = X[:,13]/X[:,16]
     # #met_tot_ratio = PRI_met/PRI_met_sumet
@@ -369,14 +370,12 @@ def preproc(X):
 #normalize columns; set to 0 if var = 0; add bias
 def normalize(X):
     """
-    normalization of the data
+    normalizes the data or sets the column to 0 if the standard deviation is 0.
     
     input
        x, data to be normalized
     output
        x, the normalized data
-       mean_x, mean of the data column
-       std_x, standard deviation of the data
     """
     #set to 0 if column has no variance
     for i in range(X.shape[1]):
@@ -388,14 +387,15 @@ def normalize(X):
 
 class MLP:
     """
-    Given activation functions and layer sizes, creates an instance of a Multi Layered Perceptrion (MLP), 
-    using BCE as cost function and regularized stochastic gradient descent with batch size one.
+    Creates a fully connected neural network with given layer size and activation functions. The loss function is
+    binary cross-entropy with L2 regularization (weight decay). It supports stochastic gradient descent with batch
+    size of 1.
     
     input
-        gamma, the learning rate of the gradient 
-        dimensions, the dimensions of the layers (Note that the input and the output shape must also be given)
-        activations, the activation functions between the layers, Two possible: relu and sigmoid.
-        weight_decay, the penalizing weight factor
+        gamma, the learning rate used for gradient descent
+        dimensions, the dimensions of the layers (including input and output)
+        activations, the activation functions used for each layer. Either 'relu', 'sigmoid' or 'linear'
+        weight_decay, the amount of L2 regularization
     """
     #activations: 'relu', 'sigmoid', 'linear'
     def __init__(self, gamma = 0.001,  dimensions = [2,10,1], activations = ['relu','sigmoid'] ,weight_decay = 0):
@@ -429,6 +429,7 @@ class MLP:
                 self.activations_grad[n+1] = lambda x : 1
     
     
+    #compute forward pass for an example
     def feed_forward(self, x):        
         # keep track of all z and a to compute gradient in the backpropagation
         z = {}
@@ -442,7 +443,7 @@ class MLP:
         y_pred = a[n+1]    
         return y_pred,a, z
     
-    # returns a prediction
+    # return predictions for input examples
     def predict(self, X):
         preds = np.zeros(X.shape[0])
         for i in range(X.shape[0]):
@@ -450,6 +451,7 @@ class MLP:
             preds[i] = (y_i_proba > 0.5)
         return preds
     
+    # return estimated probabilities for input examples
     def predict_proba(self, X):
         preds = np.zeros(X.shape[0])
         for i in range(X.shape[0]):
@@ -457,7 +459,7 @@ class MLP:
             preds[i] = y_i_proba
         return preds
     
-    # performs the backpropagation computed using the chain rule of derivation
+    # compute gradients using backpropagation
     def back_propagate(self, y,y_pred, a, z):
         
         weights_gradient = {}
@@ -473,7 +475,7 @@ class MLP:
         
         return weights_gradient, bias_gradient
     
-    # performs a gradient descent step w_(t+1) = w_t - (grad_w_t +lambda) * gamma 
+    # performs a gradient descent step and apply L2 regularization
     def gradient_descent_step(self, weights_gradient, bias_gradient):
         for n in np.arange(1, self.num_layers):
             self.weights[n] = self.weights[n] - self.gamma * (weights_gradient[n] + self.weight_decay*self.weights[n])
@@ -481,7 +483,7 @@ class MLP:
     
     def train(self, X, y, max_iter, batch_size = 1, decay = False, decay_rate = 3, decay_iteration = 0):
         """
-        Main function of the MLP. It performs max_iter regularized stochastic gradient descent steps with batch_size 1.
+        Main function of the MLP. It performs max_iter stochastic gradient descent steps with batch_size 1.
         This means that at each iteration, it will randomly select a sample in X, compute its prediction (feedforward),
         then compute its gradient accross the whole network (backpropagation) and update all the weights of all layers.
         
@@ -490,9 +492,9 @@ class MLP:
             y, the corresponding labels
             max_iter, the number of gradient descent steps
             batch_size, number of samples on which to compute the gradient
-            decay, 
-            decay_rate,
-            decay_iteration,
+            decay, whether to use learning rate decay
+            decay_rate, the factor by which the learning rate is decays
+            decay_iteration, every how many steps the learning rate is decayed
         """
         for i in range(max_iter):
             if (decay):
