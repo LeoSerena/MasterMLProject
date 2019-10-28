@@ -198,7 +198,6 @@ def pred(x, w):
     """
     return sigmoid(np.dot(x,w))
 
-#LR with GD
 def logistic_regression(y, tx, initial_w, max_iters, gamma):
     """
     logistic regression using gradient descent
@@ -259,7 +258,6 @@ def reg_logistic_gradient(y, tx, w, lambda_):
     """
     return logistic_gradient(y, tx, w) + lambda_* w
 
-#LR with L2 reg and SGD    
 def reg_logistic_regression(y, tx, lambda_, initial_w, max_iters, gamma):
     """
     regularized logistic regression using gradient descent
