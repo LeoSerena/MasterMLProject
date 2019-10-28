@@ -303,12 +303,15 @@ def standardize(x):
     return x, mean_x, std_x
 
 def preproc(X):
-    col_means = np.nanmean(X, axis=0)
-    col_means = np.nanmedian(X, axis=0)
-    idxs = np.where(np.isnan(X))
-    X[idxs] = np.take(col_means, idxs[1])
+    for i in range(X.shape[1]):
+        if (np.isnan(X[:,i]).all()):
+            X[:,i] = 0
+        else:
+            col_means = np.nanmedian(X[:,i])
+            idxs = np.where(np.isnan(X[:,i]))
+            X[idxs,i] = col_means
 
-    #feature 1: correlations der_mass_MMC
+#     feature 1: correlations der_mass_MMC
     X_gt_mmc = np.array(X[:,0], copy=True)
     # X_0_cop = np.array(X[:,0], copy=True)
     X_gt_mmc[X_gt_mmc <= 140] = 140
@@ -322,25 +325,26 @@ def preproc(X):
     tau_py = X[:,13]*np.sin(X[:,15])
     tau_pz = X[:,13]*np.sinh(X[:,14])
     tau_mod = X[:,13]*np.cosh(X[:,14])
-    X = np.column_stack((X, tau_px,tau_py,tau_pz))
+    X = np.column_stack((X, tau_px,tau_py,tau_pz,tau_mod))
     #lep momentum
     lep_px = X[:,16]*np.cos(X[:,18])
     lep_py = X[:,16]*np.sin(X[:,18])
     lep_pz = X[:,16]*np.sinh(X[:,17])
     lep_mod = X[:,16]*np.cosh(X[:,17])
-    X = np.column_stack((X, lep_px,lep_py,lep_pz))
+    X = np.column_stack((X, lep_px,lep_py,lep_pz,lep_mod))
     #leading jet momentum
     jet_px = X[:,23]*np.cos(X[:,25])
     jet_py = X[:,23]*np.sin(X[:,25])
     jet_pz = X[:,23]*np.sinh(X[:,24])
     jet_mod = X[:,23]*np.cosh(X[:,24])
-    X = np.column_stack((X, jet_px,jet_py,jet_pz))
+    X = np.column_stack((X, jet_px,jet_py,jet_pz,jet_mod))
     #subleading jet momentum
     subjet_px = X[:,26]*np.cos(X[:,28])
     subjet_py = X[:,26]*np.sin(X[:,28])
     subjet_pz = X[:,26]*np.sinh(X[:,27])
     subjet_mod = X[:,26]*np.cosh(X[:,27])
-    X = np.column_stack((X, subjet_px,subjet_py,subjet_pz))
+    X = np.column_stack((X, subjet_px,subjet_py,subjet_pz,subjet_mod))
+
 
     #feature 8: total invariant mass
     term_1 = np.sqrt(tau_px**2 + tau_py**2 + tau_pz**2) + np.sqrt(lep_px**2 + lep_py**2 + lep_pz**2) \
@@ -348,35 +352,23 @@ def preproc(X):
     term_2 = (tau_px + lep_px + jet_px + subjet_px)**2 + (tau_py + lep_py + jet_py + subjet_py)**2 \
             + (tau_pz + lep_pz + jet_pz + subjet_pz)**2
     inv_mass = np.sqrt(term_1**2 - term_2)
+    X = np.column_stack((X, inv_mass))
 
-    #feature 9: log
-    inv_log_cols = (0,1,2,3,4,5,7,8,9,10,12,13,16,19,21,23,26)
+#     feature 9: inverse log
+    inv_log_cols = [0,1,2,3,4,5,7,8,9,10,12,13,16,19,21,23,26]
     X_inv_log_cols = np.log(1 / (1 + X[:, inv_log_cols]))
     X = np.hstack((X, X_inv_log_cols))
-    # X_test_inv_log_cols = np.log(1 / (1 + X_test[:, inv_log_cols]))
-    # X_test = np.hstack((X_test, X_test_inv_log_cols))
 
-
-    #feature 4: categorical PRI_jet_num
-    jet_num_0 = (X[:,22] == 0).astype(int)
-    jet_num_1 = (X[:,22] == 1).astype(int)
-    jet_num_2 = (X[:,22] == 2).astype(int)
-    jet_num_3 = (X[:,22] == 3).astype(int)
 
     # #feature 5: pt ratios
     # #tau_lep_ratio = PRI_tau_pt/PRI_lep_pt
     tau_lep_ratio = X[:,13]/X[:,16]
     # #met_tot_ratio = PRI_met/PRI_met_sumet
     met_tot_ratio = X[:,19]/X[:,21]
-    # X = np.column_stack((X, tau_lep_ratio,jets_ratio,met_tot_ratio))
     X = np.column_stack((X, tau_lep_ratio,met_tot_ratio))
 
-    # #feature 6: jets_diff_angle
-    jets_diff_angle = np.cos(X[:,24]-X[:,27])
-    X = np.column_stack((X, jets_diff_angle))
-
-    X = make_features(X)
-    X = np.column_stack((X, jet_num_0, jet_num_1, jet_num_2, jet_num_3))
+    #X = make_features(X)
+    X = make_features_2(X)
     return X
 
 def make_features(X):
@@ -384,6 +376,19 @@ def make_features(X):
     X = np.where(X == -999., np.nan, X)
     # standardizing the data Xd = (X_d - E[X_d])/(std(X_d))
     X, means, stds = standardize(X)
+    # since data is standirdized, the mean is more or less 0 for each feature so replacing by zero is reasonable and helps computations
+    X = np.where(np.isnan(X), 0, X)
+    # adding the 1 padding
+    return np.column_stack((np.ones(X.shape[0]), X))
+
+def make_features_2(X):
+    for i in range(X.shape[1]):
+        if (X[:,i].std() == 0):
+            X[:,i] = 0
+        else:
+            X[:,i] = (X[:,i] - X[:,i].mean()) / X[:,i].std()
+#     X, means, stds = standardize(X)
+#     X = (X-X.nanmean())/X.nanstd()
     # since data is standirdized, the mean is more or less 0 for each feature so replacing by zero is reasonable and helps computations
     X = np.where(np.isnan(X), 0, X)
     # adding the 1 padding
@@ -475,6 +480,7 @@ class MLP:
             else:
                 self.activations[n+1] = lambda x : x
                 self.activations_grad[n+1] = lambda x : 1
+    
     
     def feed_forward(self, x):        
         # keep track of all z and a to compute gradient in the backpropagation
